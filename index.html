@@ -1,0 +1,182 @@
+Here’s a **self-contained HTML file** using plain JavaScript that fulfills all your requirements:
+
+- **Text input** for numbers (0-36, 00)
+- **History log** (last 50 entries)
+- **Distribution table** (frequency)
+- **SVG American roulette wheel** with red dots for hit numbers
+
+You can copy this file into your repo (e.g., `index.html`) and open it in your browser.
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>American Roulette Tracker</title>
+  <style>
+    body { font-family: sans-serif; max-width: 1000px; margin: 0 auto; background: #f7f7f7; }
+    .container { display: flex; gap: 40px; margin-top: 30px; }
+    .panel { background: #fff; border-radius: 12px; box-shadow: 0 2px 10px #0001; padding: 24px; flex: 1; }
+    .history-log { min-height: 60px; display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+    .history-item { padding: 6px 12px; border-radius: 18px; background: #eee; border: 1px solid #ddd; font-weight: bold; }
+    table { border-collapse: collapse; width: 100%; margin-top: 14px; }
+    th, td { border: 1px solid #ccc; text-align: center; padding: 3px 6px; }
+    th { background: #f0f0f0; }
+    .input-form input { width: 56px; padding: 4px; margin-right: 8px; }
+    .input-form button { padding: 4px 14px; }
+    .error { color: #c00; margin-top: 6px; }
+  </style>
+</head>
+<body>
+  <h1>American Roulette Tracker</h1>
+  <form class="input-form" id="inputForm" autocomplete="off">
+    <label>
+      Enter Number (0, 00, 1–36): 
+      <input type="text" id="numberInput" maxlength="2" required placeholder="e.g. 17 or 00" />
+    </label>
+    <button type="submit">Add</button>
+    <span class="error" id="errorMsg"></span>
+  </form>
+
+  <div class="container">
+    <div class="panel">
+      <h2>Last 50 Results</h2>
+      <div class="history-log" id="historyLog"></div>
+      <h2>Distribution</h2>
+      <table>
+        <thead><tr><th>Number</th><th>Frequency</th></tr></thead>
+        <tbody id="distributionTable"></tbody>
+      </table>
+    </div>
+    <div class="panel">
+      <h2>Roulette Wheel</h2>
+      <div id="wheelContainer"></div>
+    </div>
+  </div>
+
+<script>
+const AMERICAN_NUMBERS = [
+  "0", "00", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10",
+  "11", "12", "13", "14", "15", "16", "17", "18", "19", "20",
+  "21", "22", "23", "24", "25", "26", "27", "28", "29", "30",
+  "31", "32", "33", "34", "35", "36"
+];
+// American wheel order (clockwise)
+const AMERICAN_WHEEL_ORDER = [
+  "0","28","9","26","30","11","7","20","32","17","5","22","34","15","3","24","36","13","1",
+  "00","27","10","25","29","12","8","19","31","18","6","21","33","16","4","23","35","14","2"
+];
+// Red numbers on American wheel
+const RED_NUMBERS = new Set([
+  "1","3","5","7","9","12","14","16","18","19","21","23","25","27","30","32","34","36"
+]);
+const HISTORY_LIMIT = 50;
+let history = [];
+
+function isValidNumber(str) {
+  str = str.trim();
+  if (str === "00") return true;
+  if (!/^\d+$/.test(str)) return false;
+  const n = parseInt(str, 10);
+  return n >= 0 && n <= 36;
+}
+
+function updateHistoryLog() {
+  const log = document.getElementById("historyLog");
+  log.innerHTML = "";
+  if (history.length === 0) {
+    log.innerHTML = "<span style='color:#888;'>No numbers entered yet.</span>";
+    return;
+  }
+  history.forEach(num => {
+    const span = document.createElement("span");
+    span.className = "history-item";
+    span.textContent = num;
+    log.appendChild(span);
+  });
+}
+
+function updateDistribution() {
+  const freq = Object.fromEntries(AMERICAN_NUMBERS.map(n => [n, 0]));
+  history.forEach(n => { freq[n] = (freq[n] || 0) + 1; });
+  const tbody = document.getElementById("distributionTable");
+  tbody.innerHTML = "";
+  AMERICAN_NUMBERS.forEach(n => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `<td>${n}</td><td>${freq[n]}</td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+function updateWheel() {
+  const hitSet = new Set(history);
+  const wheelSize = 330;
+  const center = wheelSize/2;
+  const R = 140, n = AMERICAN_WHEEL_ORDER.length;
+  let svg = `<svg width="${wheelSize}" height="${wheelSize}" style="background:#f6f6fa;border-radius:50%;">`;
+  svg += `<circle cx="${center}" cy="${center}" r="${R+6}" fill="#222"/><circle cx="${center}" cy="${center}" r="${R}" fill="#0d6615" stroke="#fff" stroke-width="2"/>`;
+  // Slices
+  for(let i=0;i<n;i++){
+    const ang = 2*Math.PI*i/n - Math.PI/2;
+    const ang2 = 2*Math.PI*(i+1)/n - Math.PI/2;
+    const x1 = center + R*Math.cos(ang), y1 = center + R*Math.sin(ang);
+    const x2 = center + R*Math.cos(ang2), y2 = center + R*Math.sin(ang2);
+    const num = AMERICAN_WHEEL_ORDER[i];
+    const fill = num==="0"||num==="00" ? "#2ba84a" : RED_NUMBERS.has(num) ? "#e53935" : "#222";
+    svg += `<path d="M${center},${center} L${x1},${y1} A${R},${R} 0 0,1 ${x2},${y2} Z" fill="${fill}" opacity="0.97" stroke="#fff" stroke-width="1"/>`;
+  }
+  // Number labels
+  for(let i=0;i<n;i++){
+    const ang = 2*Math.PI*i/n - Math.PI/2;
+    const num = AMERICAN_WHEEL_ORDER[i];
+    const rx = center + (R-20)*Math.cos(ang), ry = center + (R-20)*Math.sin(ang)+4;
+    svg += `<text x="${rx}" y="${ry}" text-anchor="middle" font-size="16" font-weight="${num==="0"||num==="00"?"bold":"normal"}" fill="#fff" stroke="#000" stroke-width="2" paint-order="stroke" style="font-family:sans-serif">${num}</text>`;
+  }
+  // Red dots for hits
+  for(let i=0;i<n;i++){
+    const num = AMERICAN_WHEEL_ORDER[i];
+    if (!hitSet.has(num)) continue;
+    const ang = 2*Math.PI*i/n - Math.PI/2;
+    const rx = center + (R-35)*Math.cos(ang), ry = center + (R-35)*Math.sin(ang);
+    svg += `<circle cx="${rx}" cy="${ry}" r="10" fill="red" stroke="#fff" stroke-width="2" opacity="0.9"/>`;
+  }
+  svg += "</svg>";
+  document.getElementById("wheelContainer").innerHTML = svg;
+}
+
+function refreshUI() {
+  updateHistoryLog();
+  updateDistribution();
+  updateWheel();
+}
+
+document.getElementById("inputForm").addEventListener("submit", function(e){
+  e.preventDefault();
+  const inp = document.getElementById("numberInput");
+  const err = document.getElementById("errorMsg");
+  let val = inp.value.trim();
+  if (val === "") { err.textContent = ""; return; }
+  if (!isValidNumber(val)) {
+    err.textContent = "Please enter 0, 00, or a number from 1 to 36.";
+    return;
+  }
+  err.textContent = "";
+  if (val === "00") val = "00"; else val = String(Number(val)); // Normalize
+  history.unshift(val);
+  if (history.length > HISTORY_LIMIT) history.length = HISTORY_LIMIT;
+  inp.value = "";
+  refreshUI();
+});
+
+refreshUI();
+</script>
+</body>
+</html>
+```
+
+**How to use:**
+- Copy and paste this code into a file named `index.html`.
+- Open it in your browser.
+- Enter numbers ("0", "00", or "1"–"36") and see the app in action.
+
+Let me know if you need it modularized or further customized!
