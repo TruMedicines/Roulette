@@ -1,13 +1,3 @@
-Here’s a **self-contained HTML file** using plain JavaScript that fulfills all your requirements:
-
-- **Text input** for numbers (0-36, 00)
-- **History log** (last 50 entries)
-- **Distribution table** (frequency)
-- **SVG American roulette wheel** with red dots for hit numbers
-
-You can copy this file into your repo (e.g., `index.html`) and open it in your browser.
-
-```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -15,6 +5,23 @@ You can copy this file into your repo (e.g., `index.html`) and open it in your b
   <title>American Roulette Tracker</title>
   <style>
     body { font-family: sans-serif; max-width: 1000px; margin: 0 auto; background: #f7f7f7; }
+    .number-bar {
+      display: flex; flex-wrap: wrap; gap: 8px; margin: 24px 0 16px 0; justify-content: center;
+      background: #fff; border-radius: 10px; box-shadow: 0 2px 10px #0001; padding: 16px;
+      position: sticky; top: 0; z-index: 100;
+    }
+    .number-btn {
+      min-width: 45px; min-height: 40px; font-size: 1.1rem; font-weight: bold;
+      border: 2px solid #fff; border-radius: 8px; cursor: pointer;
+      transition: background .1s, border-color .1s;
+      touch-action: manipulation;
+      user-select: none;
+      color: #fff;
+    }
+    .number-btn:active {
+      opacity: 0.8;
+      border-color: #222;
+    }
     .container { display: flex; gap: 40px; margin-top: 30px; }
     .panel { background: #fff; border-radius: 12px; box-shadow: 0 2px 10px #0001; padding: 24px; flex: 1; }
     .history-log { min-height: 60px; display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
@@ -22,21 +29,15 @@ You can copy this file into your repo (e.g., `index.html`) and open it in your b
     table { border-collapse: collapse; width: 100%; margin-top: 14px; }
     th, td { border: 1px solid #ccc; text-align: center; padding: 3px 6px; }
     th { background: #f0f0f0; }
-    .input-form input { width: 56px; padding: 4px; margin-right: 8px; }
-    .input-form button { padding: 4px 14px; }
     .error { color: #c00; margin-top: 6px; }
   </style>
 </head>
 <body>
   <h1>American Roulette Tracker</h1>
-  <form class="input-form" id="inputForm" autocomplete="off">
-    <label>
-      Enter Number (0, 00, 1–36): 
-      <input type="text" id="numberInput" maxlength="2" required placeholder="e.g. 17 or 00" />
-    </label>
-    <button type="submit">Add</button>
-    <span class="error" id="errorMsg"></span>
-  </form>
+
+  <!-- Touch-sensitive Number Bar -->
+  <div class="number-bar" id="numberBar"></div>
+  <span class="error" id="errorMsg"></span>
 
   <div class="container">
     <div class="panel">
@@ -73,12 +74,46 @@ const RED_NUMBERS = new Set([
 const HISTORY_LIMIT = 50;
 let history = [];
 
-function isValidNumber(str) {
-  str = str.trim();
-  if (str === "00") return true;
-  if (!/^\d+$/.test(str)) return false;
-  const n = parseInt(str, 10);
-  return n >= 0 && n <= 36;
+// Color-coded number bar
+function updateNumberBar() {
+  const bar = document.getElementById("numberBar");
+  bar.innerHTML = '';
+  AMERICAN_NUMBERS.forEach(num => {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "number-btn";
+    btn.textContent = num;
+
+    // Set the button color
+    if (num === "0" || num === "00") {
+      btn.style.background = "#2ba84a";
+      btn.style.color = "#fff";
+      btn.style.borderColor = "#2ba84a";
+    } else if (RED_NUMBERS.has(num)) {
+      btn.style.background = "#e53935";
+      btn.style.color = "#fff";
+      btn.style.borderColor = "#e53935";
+    } else {
+      btn.style.background = "#222";
+      btn.style.color = "#fff";
+      btn.style.borderColor = "#222";
+    }
+
+    btn.addEventListener('click', () => addNumber(num));
+    bar.appendChild(btn);
+  });
+}
+
+function addNumber(val) {
+  const err = document.getElementById("errorMsg");
+  err.textContent = "";
+  if (!AMERICAN_NUMBERS.includes(val)) {
+    err.textContent = "Invalid number!";
+    return;
+  }
+  history.unshift(val);
+  if (history.length > HISTORY_LIMIT) history.length = HISTORY_LIMIT;
+  refreshUI();
 }
 
 function updateHistoryLog() {
@@ -109,10 +144,10 @@ function updateDistribution() {
 }
 
 function updateWheel() {
-  const hitSet = new Set(history);
   const wheelSize = 660;
   const center = wheelSize/2;
   const R = 280, n = AMERICAN_WHEEL_ORDER.length;
+
   let svg = `<svg width="${wheelSize}" height="${wheelSize}" style="background:#f6f6fa;border-radius:50%;">`;
   svg += `<circle cx="${center}" cy="${center}" r="${R+6}" fill="#222"/><circle cx="${center}" cy="${center}" r="${R}" fill="#0d6615" stroke="#fff" stroke-width="2"/>`;
   // Slices
@@ -125,58 +160,22 @@ function updateWheel() {
     const fill = num==="0"||num==="00" ? "#2ba84a" : RED_NUMBERS.has(num) ? "#e53935" : "#222";
     svg += `<path d="M${center},${center} L${x1},${y1} A${R},${R} 0 0,1 ${x2},${y2} Z" fill="${fill}" opacity="0.97" stroke="#fff" stroke-width="1"/>`;
   }
-  // Number labels
+  // Number labels (small, on rim, upright, rotated 20px to the right)
+  const labelRadius = R - 18;
+  const arcOffset = 20;
+  const angleOffset = arcOffset / labelRadius;
   for(let i=0;i<n;i++){
     const ang = 2*Math.PI*i/n - Math.PI/2;
+    const ang2 = ang + angleOffset;
     const num = AMERICAN_WHEEL_ORDER[i];
-    const rx = center + (R-20)*Math.cos(ang), ry = center + (R-20)*Math.sin(ang)+4;
-    svg += `<text x="${rx}" y="${ry}" text-anchor="middle" font-size="16" font-weight="${num==="0"||num==="00"?"bold":"normal"}" fill="#fff" stroke="#000" stroke-width="2" paint-order="stroke" style="font-family:sans-serif">${num}</text>`;
+    const rx = center + labelRadius * Math.cos(ang2);
+    const ry = center + labelRadius * Math.sin(ang2);
+    svg += `<g transform="translate(${rx},${ry}) rotate(${(ang2*180/Math.PI)+90})">
+      <text text-anchor="middle" alignment-baseline="middle"
+       font-size="18" font-weight="${num==="0"||num==="00"?"bold":"normal"}"
+       fill="#fff" stroke="#000" stroke-width="1.2" paint-order="stroke"
+       style="font-family:sans-serif" transform="rotate(-${(ang2*180/Math.PI)+90})">${num}</text>
+    </g>`;
   }
-  // Red dots for hits
-  for(let i=0;i<n;i++){
-    const num = AMERICAN_WHEEL_ORDER[i];
-    if (!hitSet.has(num)) continue;
-    const ang = 2*Math.PI*i/n - Math.PI/2;
-    const rx = center + (R-35)*Math.cos(ang), ry = center + (R-35)*Math.sin(ang);
-    svg += `<circle cx="${rx}" cy="${ry}" r="10" fill="red" stroke="#fff" stroke-width="2" opacity="0.9"/>`;
-  }
-  svg += "</svg>";
-  document.getElementById("wheelContainer").innerHTML = svg;
-}
-
-function refreshUI() {
-  updateHistoryLog();
-  updateDistribution();
-  updateWheel();
-}
-
-document.getElementById("inputForm").addEventListener("submit", function(e){
-  e.preventDefault();
-  const inp = document.getElementById("numberInput");
-  const err = document.getElementById("errorMsg");
-  let val = inp.value.trim();
-  if (val === "") { err.textContent = ""; return; }
-  if (!isValidNumber(val)) {
-    err.textContent = "Please enter 0, 00, or a number from 1 to 36.";
-    return;
-  }
-  err.textContent = "";
-  if (val === "00") val = "00"; else val = String(Number(val)); // Normalize
-  history.unshift(val);
-  if (history.length > HISTORY_LIMIT) history.length = HISTORY_LIMIT;
-  inp.value = "";
-  refreshUI();
-});
-
-refreshUI();
-</script>
-</body>
-</html>
-```
-
-**How to use:**
-- Copy and paste this code into a file named `index.html`.
-- Open it in your browser.
-- Enter numbers ("0", "00", or "1"–"36") and see the app in action.
-
-Let me know if you need it modularized or further customized!
+  // Green dots for hits,
+
