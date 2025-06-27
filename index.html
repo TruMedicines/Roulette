@@ -110,9 +110,9 @@ function updateDistribution() {
 
 function updateWheel() {
   const hitSet = new Set(history);
-  const wheelSize = 330;
+  const wheelSize = 660;
   const center = wheelSize/2;
-  const R = 140, n = AMERICAN_WHEEL_ORDER.length;
+  const R = 280, n = AMERICAN_WHEEL_ORDER.length;
   let svg = `<svg width="${wheelSize}" height="${wheelSize}" style="background:#f6f6fa;border-radius:50%;">`;
   svg += `<circle cx="${center}" cy="${center}" r="${R+6}" fill="#222"/><circle cx="${center}" cy="${center}" r="${R}" fill="#0d6615" stroke="#fff" stroke-width="2"/>`;
   // Slices
