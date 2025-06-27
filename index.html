@@ -12,15 +12,13 @@
     }
     .number-btn {
       min-width: 45px; min-height: 40px; font-size: 1.1rem; font-weight: bold;
-      border: 2px solid #fff; border-radius: 8px; cursor: pointer;
+      background: #f5f5f5; border: 2px solid #bbb; border-radius: 8px; cursor: pointer;
       transition: background .1s, border-color .1s;
       touch-action: manipulation;
       user-select: none;
-      color: #fff;
     }
     .number-btn:active {
-      opacity: 0.8;
-      border-color: #222;
+      background: #e0e0e0; border-color: #444;
     }
     .container { display: flex; gap: 40px; margin-top: 30px; }
     .panel { background: #fff; border-radius: 12px; box-shadow: 0 2px 10px #0001; padding: 24px; flex: 1; }
@@ -74,7 +72,6 @@ const RED_NUMBERS = new Set([
 const HISTORY_LIMIT = 50;
 let history = [];
 
-// Color-coded number bar
 function updateNumberBar() {
   const bar = document.getElementById("numberBar");
   bar.innerHTML = '';
@@ -88,15 +85,12 @@ function updateNumberBar() {
     if (num === "0" || num === "00") {
       btn.style.background = "#2ba84a";
       btn.style.color = "#fff";
-      btn.style.borderColor = "#2ba84a";
     } else if (RED_NUMBERS.has(num)) {
       btn.style.background = "#e53935";
       btn.style.color = "#fff";
-      btn.style.borderColor = "#e53935";
     } else {
       btn.style.background = "#222";
       btn.style.color = "#fff";
-      btn.style.borderColor = "#222";
     }
 
     btn.addEventListener('click', () => addNumber(num));
@@ -177,5 +171,40 @@ function updateWheel() {
        style="font-family:sans-serif" transform="rotate(-${(ang2*180/Math.PI)+90})">${num}</text>
     </g>`;
   }
-  // Green dots for hits,
-
+  // Green dots for hits, with multiples if hit more than once, aligned with numbers
+  const markerRadius = 10;
+  const dotBaseRadius = R - 50;
+  const dotSeparation = 22;
+  // Calculate hit counts for each number
+  const hitCounts = {};
+  history.forEach(num => {
+    hitCounts[num] = (hitCounts[num] || 0) + 1;
+  });
+  for(let i=0;i<n;i++){
+    const num = AMERICAN_WHEEL_ORDER[i];
+    const count = hitCounts[num] || 0;
+    if (!count) continue;
+    const ang = 2*Math.PI*i/n - Math.PI/2;
+    const ang2 = ang + angleOffset;
+    for(let k=0; k<count; k++) {
+      const dotRadius = dotBaseRadius - (k * dotSeparation);
+      const rx = center + dotRadius * Math.cos(ang2);
+      const ry = center + dotRadius * Math.sin(ang2);
+      svg += `<circle cx="${rx}" cy="${ry}" r="${markerRadius}" fill="green" stroke="#fff" stroke-width="2" opacity="0.9"/>`;
+    }
+  }
+  svg += "</svg>";
+  document.getElementById("wheelContainer").innerHTML = svg;
+}
+
+function refreshUI() {
+  updateHistoryLog();
+  updateDistribution();
+  updateWheel();
+}
+
+updateNumberBar();
+refreshUI();
+</script>
+</body>
+</html>
